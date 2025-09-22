@@ -2,60 +2,36 @@ name: Deploy Portfolio to GitHub Pages
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-    - name: Install dependencies
-      run: |
-        npm init -y
-        npm install --save-dev html-minifier-terser clean-css-cli terser
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
 
-    - name: Build and optimize
-      run: |
-        # Create build directory
-        mkdir -p build
-        
-        # Copy all files to build directory
-        cp -r * build/ 2>/dev/null || :
-        
-        # Remove unnecessary files from build
-        rm -rf build/node_modules build/package*.json build/.git* build/README.md 2>/dev/null || :
-        
-        # Minify HTML files
-        find build -name "*.html" -exec html-minifier-terser --collapse-whitespace --remove-comments --minify-css --minify-js {} -o {} \;
-        
-        # Minify CSS files
-        find build -name "*.css" -exec sh -c 'cleancss "$1" -o "$1"' _ {} \;
-        
-        # Minify JS files
-        find build -name "*.js" -exec sh -c 'terser "$1" --compress --mangle -o "$1"' _ {} \;
-
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
-
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: ./build
-
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
